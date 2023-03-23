@@ -4,10 +4,13 @@ import 'models/command.dart';
 import 'models/guest.dart';
 import 'models/room.dart';
 
+//Welcome to PEAK Hotel
+
 List<Room> rooms = [];
 
 List<int> keyCards = [];
 
+///Run APP HERE!!
 void main() {
   const String fileName = 'input.txt';
   final List<Command> commands = getCommandsFromFileName(fileName);
@@ -53,7 +56,7 @@ List<Command> getCommandsFromFileName(String fileName) {
   final List<String> textLines = File(fileName).readAsLinesSync();
 
   return textLines
-      .map((line) => line.split(" "))
+      .map((line) => line.split(' '))
       .map((lineItems) => Command(
             name: lineItems.first,
             params: lineItems
@@ -69,7 +72,7 @@ void createHotel(params) {
   final int floor = hotel[0];
   final int roomsPerFloor = hotel[1];
 
-  //Generate rooms
+  //Build rooms
   for (int iFloor = 1; iFloor <= floor; iFloor++) {
     for (int iRoom = 1; iRoom <= roomsPerFloor; iRoom++) {
       rooms.add(Room(
@@ -90,7 +93,7 @@ void createHotel(params) {
 
 void book(params) {
   final booking = List.from(params);
-  final int roomNo = booking[0];
+  final String roomNo = booking[0].toString();
   final String guestName = booking[1];
   final int guestAge = booking[2];
 
@@ -109,13 +112,14 @@ void book(params) {
   //Receptionist picks the first available keycard.
   int selectedKeyCard = keyCards.first;
 
+  //Booking...
   rooms[index]
     ..guest = Guest(name: guestName, age: guestAge)
     ..status = RoomStatus.booked
     ..keyCardNo = selectedKeyCard;
 
   //Remove keycard from the shelf.
-  keyCards.remove(selectedKeyCard);
+  keyCards.removeAt(0);
 
   print(
       'Room $roomNo is booked by $guestName with keycard number $selectedKeyCard.');
@@ -123,14 +127,14 @@ void book(params) {
 
 void bookByFloor(params) {
   final booking = List.from(params);
-  final int floor = booking[0];
+  final int floor = booking.first;
   final String guestName = booking[1];
   final int guestAge = booking[2];
 
   var bookedRooms = Set<String>();
   var inUsedkeyCards = Set<int>();
 
-//Check if there is any room is booked.
+  //Check if there is any room is booked.
   for (Room room in rooms) {
     if (room.floor == floor && room.status == RoomStatus.booked) {
       print('Cannot book floor $floor for $guestName.');
@@ -141,18 +145,22 @@ void bookByFloor(params) {
   //Sort keycard.
   keyCards.sort();
 
-  //Receptionist picks the first available keycard.
-  int selectedKeyCard = keyCards.first;
-
   for (Room room in rooms) {
+    //Check floor
+    if (room.floor != floor) {
+      continue;
+    }
+
+    //Booking
     room
       ..guest = Guest(name: guestName, age: guestAge)
       ..status = RoomStatus.booked
-      ..keyCardNo = selectedKeyCard;
+      ..keyCardNo = keyCards.first;
 
     //Remove keycard from the shelf.
-    keyCards.remove(selectedKeyCard);
+    keyCards.removeAt(0);
 
+    //Record history
     bookedRooms.add(room.roomNo!);
     inUsedkeyCards.add(room.keyCardNo!);
   }
@@ -177,7 +185,7 @@ void getAvaliableRooms() {
 
 void checkout(params) {
   final checkoutInfo = List.from(params);
-  final int keyCardNo = checkoutInfo[0];
+  final int keyCardNo = checkoutInfo.first;
   final String guestName = checkoutInfo[1];
 
   //Get index of the guest's room.
@@ -190,6 +198,7 @@ void checkout(params) {
     return;
   }
 
+  //Checkout
   rooms[index]
     ..guest = null
     ..keyCardNo = null
@@ -205,20 +214,31 @@ void checkoutGuestByFloor(params) {
   final int floor = List.from(params).first;
   var checkedOutRooms = Set<String>();
 
-  rooms.forEach((room) {
-    if (room.floor == floor && room.status == RoomStatus.booked) {
-      //Check out.
-      room
-        ..guest = null
-        ..keyCardNo = null
-        ..status = RoomStatus.available;
-
-      checkedOutRooms.add(room.roomNo!);
-
-      //Return all keycards.
-      keyCards.add(room.keyCardNo!);
+  for (Room room in rooms) {
+    //Check floor
+    if (room.floor != floor) {
+      continue;
     }
-  });
+    //Check room's status
+    if (room.status == RoomStatus.available) {
+      continue;
+    }
+
+    //Get keycard from the guest
+    final int returnedKeycard = room.keyCardNo!;
+
+    //Check out.
+    room
+      ..guest = null
+      ..keyCardNo = null
+      ..status = RoomStatus.available;
+
+    //Record history.
+    checkedOutRooms.add(room.roomNo!);
+
+    //Get back the keycards.
+    keyCards.add(returnedKeycard);
+  }
 
   final String allCheckedOutRooms = checkedOutRooms.join(', ');
 
@@ -226,17 +246,20 @@ void checkoutGuestByFloor(params) {
 }
 
 void getUniqueGuests() {
-  var uniqueGuests = Set<String?>();
+  var uniqueGuests = Set<String>();
 
   rooms.forEach((room) {
-    uniqueGuests.add(room.guest?.name);
+    if (room.guest != null) {
+      uniqueGuests.add(room.guest!.name!);
+    }
   });
 
-  print(uniqueGuests);
+  //Sort DESC.
+  print(uniqueGuests.toList().reversed);
 }
 
 void getGuestByRoomNo(params) {
-  final roomNo = List.from(params).first;
+  final String roomNo = List.from(params).first.toString();
 
   final roomInfo = rooms.firstWhere((room) => room.roomNo == roomNo);
 
@@ -247,14 +270,14 @@ void getGuestByAge(params) {
   final data = List.from(params);
   final String mathOperator = data[0];
   final int age = data[1];
-  var guests = Set<String?>();
+  var guests = Set<String>();
 
   switch (mathOperator) {
     case '<':
       rooms.forEach((room) {
         if (room.guest != null) {
           if (room.guest!.age! < age) {
-            guests.add(room.guest?.name);
+            guests.add(room.guest!.name!);
           }
         }
       });
@@ -263,7 +286,7 @@ void getGuestByAge(params) {
       rooms.forEach((room) {
         if (room.guest != null) {
           if (room.guest!.age! <= age) {
-            guests.add(room.guest?.name);
+            guests.add(room.guest!.name!);
           }
         }
       });
@@ -272,7 +295,7 @@ void getGuestByAge(params) {
       rooms.forEach((room) {
         if (room.guest != null) {
           if (room.guest!.age! == age) {
-            guests.add(room.guest?.name);
+            guests.add(room.guest!.name!);
           }
         }
       });
@@ -281,7 +304,7 @@ void getGuestByAge(params) {
       rooms.forEach((room) {
         if (room.guest != null) {
           if (room.guest!.age! >= age) {
-            guests.add(room.guest?.name);
+            guests.add(room.guest!.name!);
           }
         }
       });
@@ -290,7 +313,7 @@ void getGuestByAge(params) {
       rooms.forEach((room) {
         if (room.guest != null) {
           if (room.guest!.age! > age) {
-            guests.add(room.guest?.name);
+            guests.add(room.guest!.name!);
           }
         }
       });
@@ -303,29 +326,17 @@ void getGuestByAge(params) {
 }
 
 void getGuestByFloor(params) {
-  final int age = List.from(params).first;
-  var guests = Set<String?>();
-
-  rooms.forEach((room) {
-    if (room.guest != null) {
-      if (room.guest!.age! < age) {
-        guests.add(room.guest?.name);
-      }
-    }
-  });
-
-  print(guests);
-}
-
-void getGuestsByFloor(params) {
   final int floor = List.from(params).first;
-  var guests = Set<String?>();
+  var guests = Set<String>();
 
-  rooms.forEach((room) {
+  final roomsOfFloor = rooms.where((room) => room.floor == floor);
+
+  roomsOfFloor.forEach((room) {
     if (room.floor == floor && room.guest != null) {
-      guests.add(room.guest?.name);
+      guests.add(room.guest!.name!);
     }
   });
 
   print(guests);
 }
+
