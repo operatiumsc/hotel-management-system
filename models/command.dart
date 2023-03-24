@@ -1,6 +1,6 @@
 class Command {
   String? name;
-  List<dynamic>? params;
+  List? params;
 
   Command({this.name, this.params});
 }
